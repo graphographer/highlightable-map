@@ -1,9 +1,9 @@
+import commonjs from '@rollup/plugin-commonjs';
 import json from '@rollup/plugin-json';
 import nodeResolve from '@rollup/plugin-node-resolve';
-import commonjs from '@rollup/plugin-commonjs';
-import importCss from 'rollup-plugin-import-css';
-import typescript from '@rollup/plugin-typescript';
 import terser from '@rollup/plugin-terser';
+import typescript from '@rollup/plugin-typescript';
+import importCss from 'rollup-plugin-import-css';
 
 export default [
 	{
@@ -12,6 +12,7 @@ export default [
 			dir: 'dist',
 			sourcemap: true
 		},
+		external: ['lit', 'leaflet'],
 		plugins: [nodeResolve(), json(), commonjs(), importCss(), typescript()]
 	},
 	{

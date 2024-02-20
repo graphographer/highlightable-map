@@ -1,7 +1,7 @@
 import leafletCss from 'leaflet/dist/leaflet.css';
 import { unsafeCSS } from 'lit';
 import { HighlightableMap } from './HighlightableMap';
-import geodata from './geodata.json';
+import geodata from './geoJson.json';
 import { customElement } from 'lit/decorators/custom-element.js';
 
 @customElement('highlightable-map')
