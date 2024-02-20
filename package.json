@@ -14,7 +14,6 @@
 		"lit": "^3.1.2"
 	},
 	"main": "dist/index.js",
-	"browser": "dist/HighlightableMapBundled.js",
 	"scripts": {
 		"build": "rollup -c"
 	}
