@@ -5,7 +5,7 @@ import {
 	map,
 	tooltip
 } from 'leaflet';
-import { LitElement, PropertyValueMap, css, html, unsafeCSS } from 'lit';
+import { LitElement, PropertyValueMap, css, html } from 'lit';
 import { property } from 'lit/decorators/property.js';
 
 export class HighlightableMap extends LitElement {

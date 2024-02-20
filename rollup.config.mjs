@@ -13,7 +13,14 @@ export default [
 			sourcemap: true
 		},
 		external: ['lit', 'leaflet'],
-		plugins: [nodeResolve(), json(), commonjs(), importCss(), typescript()]
+		plugins: [
+			nodeResolve(),
+			json(),
+			commonjs(),
+			importCss(),
+			typescript({ compilerOptions: { declaration: true } })
+		],
+		cache: false
 	},
 	{
 		input: 'src/HighlightableMapBundled.ts',

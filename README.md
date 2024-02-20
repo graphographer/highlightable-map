@@ -20,10 +20,13 @@ stylesheet.replaceSync(styles.toString());
 // alternately, Webpack's 'css-loader' can take the option to export a constructable stylesheet directly
 
 const map = document.createElement('highlightable-map');
-map.setCss(stylesheet);
 map.setGeoJson(geoJson);
 
 document.body.appendChild(map);
+
+// note that styles will not be applied properly if this is done before the element is in the document.
+// this is because `shadowRoot` (and therefore its stylesheet array) will not be created until then.
+map.setCss(stylesheet);
 ```
 
 ### Bundled Version
