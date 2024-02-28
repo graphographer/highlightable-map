@@ -29,6 +29,7 @@ export default [
 			sourcemap: true,
 			plugins: [terser()]
 		},
+		watch: true,
 		plugins: [nodeResolve(), json(), commonjs(), importCss(), typescript()]
 	}
 ];
