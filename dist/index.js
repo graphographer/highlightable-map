@@ -50,37 +50,44 @@ const t=globalThis,e$1=t.ShadowRoot&&(void 0===t.ShadyCSS||t.ShadyCSS.nativeShad
  */const o={attribute:!0,type:String,converter:u,reflect:!1,hasChanged:f},r=(t=o,e,r)=>{const{kind:n,metadata:i}=r;let s=globalThis.litPropertyMetadata.get(i);if(void 0===s&&globalThis.litPropertyMetadata.set(i,s=new Map),s.set(r.name,t),"accessor"===n){const{name:o}=r;return {set(r){const n=e.get.call(this);e.set.call(this,r),this.requestUpdate(o,n,t);},init(e){return void 0!==e&&this.P(o,void 0,t),e}}}if("setter"===n){const{name:o}=r;return function(r){const n=this[o];e.call(this,r),this.requestUpdate(o,n,t);}}throw Error("Unsupported decorator location: "+n)};function n(t){return (e,o)=>"object"==typeof o?r(t,e,o):((t,e,o)=>{const r=e.hasOwnProperty(o);return e.constructor.createProperty(o,r?{...t,wrapped:!0}:t),r?Object.getOwnPropertyDescriptor(e,o):void 0})(t,e,o)}
 
 class HighlightableMap extends LitElement {
-    setTooltipFn(fn) {
-        this.tooltipFn = fn.bind(this);
-    }
     constructor() {
         super();
+        this.features = new Set();
         this.mapEl = document.createElement('div');
+        this.highlight = [];
+        this.filter = [];
+        this.selected = [];
         this.tooltip = false;
         this.autozoom = false;
         this.center = [0, 0];
         this.zoom = 2;
-        this.highlight = [];
         this.countryFeatures = new Map();
         this.countryEls = new Map();
         this.leafletMap = map(this.mapEl, {
             attributionControl: false,
-            zoomSnap: 0.5
-        }).addEventListener('resize', this.onResize.bind(this));
+            zoomSnap: 0,
+            zoomAnimation: false,
+            trackResize: true
+        }).on('resize', this.onResize.bind(this));
+    }
+    setTooltipFn(fn) {
+        this.tooltipFn = fn.bind(this);
     }
     setCss(sheet) {
         if (this.shadowRoot) {
             this.shadowRoot.adoptedStyleSheets.unshift(sheet);
         }
     }
+    // static geodata: object | undefined;
     setGeoJson(geodata) {
-        if (this.geoJson) {
-            this.geoJson.clearAllEventListeners().remove();
-        }
+        // if (HighlightableMap.geoJson) {
+        // 	HighlightableMap.geoJson.clearAllEventListeners().remove();
+        // }
         const tt = tooltip();
         this.geoJson = geoJSON(geodata, {
             onEachFeature: (feature, layer) => {
-                const { properties: { SOVEREIGNT: country, ADM0_A3_US: id } } = feature;
+                const { properties: { NAME_SORT: country, ADM0_A3_US: id } } = feature;
+                this.features.add(layer);
                 this.countryFeatures.set(id, layer);
                 this.countryFeatures.set(country, layer);
             },
@@ -105,7 +112,7 @@ class HighlightableMap extends LitElement {
                     composed: true,
                     detail: e.propagatedFrom
                 }));
-                const { feature: { properties: { SOVEREIGNT: countryName, ADM0_A3_US: countryId } } } = e.propagatedFrom;
+                const { feature: { properties: { NAME_SORT: countryName, ADM0_A3_US: countryId } } } = e.propagatedFrom;
                 if (this.highlight.find(country => {
                     return country === countryId || country === countryName;
                 })) {
@@ -120,7 +127,7 @@ class HighlightableMap extends LitElement {
                     composed: true,
                     detail: e.propagatedFrom
                 }));
-                const { feature: { properties: { SOVEREIGNT: countryName, ADM0_A3_US: countryId } } } = e.propagatedFrom;
+                const { feature: { properties: { NAME_SORT: countryName, ADM0_A3_US: countryId } } } = e.propagatedFrom;
                 if (this.tooltip) {
                     if (typeof this.tooltipFn === 'function') {
                         this.tooltipFn(e, tt);
@@ -145,7 +152,12 @@ class HighlightableMap extends LitElement {
             }
         })
             .addTo(this.leafletMap);
-        this.requestUpdate();
+        this.enumerateFeatures();
+        setTimeout(() => {
+            this.dispatchEvent(new CustomEvent('hm-rendered', { bubbles: true, composed: true }));
+            this.onResize();
+            this.requestUpdate('highlight');
+        });
     }
     get mismatched() {
         if (!this.highlight.length)
@@ -153,40 +165,97 @@ class HighlightableMap extends LitElement {
         const countryNames = [...this.countryFeatures.keys()];
         return this.highlight.filter(countryName => !countryNames.includes(countryName));
     }
-    async firstUpdated() {
+    enumerateFeatures() {
         this.leafletMap.setView([0, 0], 2);
         this.countryFeatures.forEach((layer, country) => {
             this.countryEls.set(country, layer.getElement());
         });
-        this.dispatchEvent(new CustomEvent('hm-rendered', { bubbles: true, composed: true }));
     }
     updated(_changedProperties) {
-        var _a;
-        (_a = _changedProperties.get('highlight')) === null || _a === void 0 ? void 0 : _a.forEach((country) => {
-            var _a;
-            (_a = this.countryFeatures
-                .get(country)) === null || _a === void 0 ? void 0 : _a.getElement().classList.remove('bwm-highlight');
-        });
-        if (this.autozoom && this.highlight.length && this.countries.length) {
-            const countriesFg = featureGroup(this.countries);
-            // countriesFg.setStyle({ className: 'bwm-highlight' });
-            this.countries.forEach(feature => {
-                feature.getElement().classList.add('bwm-highlight');
-            });
-            this.leafletMap.fitBounds(countriesFg.getBounds());
+        var _a, _b;
+        if (this['no-control']) {
+            this.leafletMap.zoomControl.remove();
+            this.leafletMap.scrollWheelZoom.disable();
+            this.leafletMap.dragging.disable();
+            this.leafletMap.touchZoom.disable();
+            this.leafletMap.doubleClickZoom.disable();
+            this.leafletMap.boxZoom.disable();
+            this.leafletMap.keyboard.disable();
+            if (this.leafletMap.tap) {
+                this.leafletMap.tap.disable();
+            }
         }
         else {
-            this.leafletMap.setView(this.center, this.zoom);
+            this.leafletMap.zoomControl.addTo(this.leafletMap);
+            this.leafletMap.scrollWheelZoom.enable();
+            this.leafletMap.dragging.enable();
+            this.leafletMap.touchZoom.enable();
+            this.leafletMap.doubleClickZoom.enable();
+            this.leafletMap.boxZoom.enable();
+            this.leafletMap.keyboard.enable();
+            if (this.leafletMap.tap) {
+                this.leafletMap.tap.enable();
+            }
         }
+        if (_changedProperties.has('filter')) {
+            if (this.countryFeatures.size && this.filter.length) {
+                this.countryFeatures.forEach(feature => {
+                    const { feature: { properties: { NAME_SORT, ADM0_A3_US } } } = feature;
+                    if (this.filter.includes(NAME_SORT) ||
+                        this.filter.includes(ADM0_A3_US)) {
+                        // console.log('ADDING', feature);
+                        feature.addTo(this.leafletMap);
+                    }
+                    else {
+                        // console.log('REMOVING', feature);
+                        feature.remove();
+                    }
+                });
+            }
+        }
+        // unhighlight previously highlighted
+        (_a = _changedProperties.get('highlight')) === null || _a === void 0 ? void 0 : _a.forEach((country) => {
+            var _a, _b;
+            (_b = (_a = this.countryFeatures
+                .get(country)) === null || _a === void 0 ? void 0 : _a.getElement()) === null || _b === void 0 ? void 0 : _b.classList.remove('bwm-highlight');
+        });
+        // highlight current
+        this.highlightedFeatures.forEach(feature => {
+            var _a;
+            (_a = feature.getElement()) === null || _a === void 0 ? void 0 : _a.classList.add('bwm-highlight');
+        });
+        // if autozoom is set, reposition map
+        if (_changedProperties.has('highlight')) {
+            if (this.autozoom && this.highlightedFeatures.length) {
+                const countriesFg = featureGroup(this.highlightedFeatures);
+                this.leafletMap.fitBounds(countriesFg.getBounds());
+            }
+            else if (this.highlightedFeatures.length) {
+                this.leafletMap.setView(this.center, this.zoom);
+            }
+        }
+        // unstroke previously selected
+        (_b = _changedProperties.get('selected')) === null || _b === void 0 ? void 0 : _b.forEach((country) => {
+            var _a;
+            (_a = this.countryEls.get(country)) === null || _a === void 0 ? void 0 : _a.classList.remove('bwm-selected');
+        });
+        // stroke currently selected
+        this.selected.forEach((country) => {
+            var _a, _b, _c;
+            (_b = (_a = this.countryFeatures
+                .get(country)) === null || _a === void 0 ? void 0 : _a.getElement()) === null || _b === void 0 ? void 0 : _b.classList.add('bwm-selected');
+            (_c = this.countryFeatures.get(country)) === null || _c === void 0 ? void 0 : _c.bringToFront();
+        });
     }
-    get countries() {
-        var _a;
-        return (_a = this.highlight) === null || _a === void 0 ? void 0 : _a.map((country) => this.countryFeatures.get(country)).filter(Boolean);
+    get highlightedFeatures() {
+        return this.highlight
+            .map((country) => this.countryFeatures.get(country))
+            .filter(Boolean);
     }
     onResize() {
-        if (!this.countries.length)
+        if (!this.autozoom || !this.highlightedFeatures.length)
             return;
-        const countriesFg = featureGroup(this.countries);
+        const countriesFg = featureGroup(this.highlightedFeatures);
         this.leafletMap.fitBounds(countriesFg.getBounds());
     }
     render() {
@@ -195,8 +264,8 @@ class HighlightableMap extends LitElement {
 			<div class="sr-only">
 				<h2>Highlighted Countries</h2>
 				<ul>
-					${this.countries
-            .map(country => country.feature.properties.SOVEREIGNT)
+					${this.highlightedFeatures
+            .map(country => country.feature.properties.NAME_SORT)
             .sort()
             .map(country => html `<li>${country}</li>`)}
 				</ul>
@@ -208,13 +277,14 @@ HighlightableMap.styles = [
     css `
 			:host {
 				display: block;
-				height: 500px;
+				height: 100%;
 				width: auto;
 				margin-bottom: 20px;
 
 				--bwm-background: #f4f4f4;
 				--bwm-country: #cfcdc9;
 				--bwm-highlight: #0067b9;
+				--bwm-selected: #ba0c2f;
 			}
 
 			.leaflet-container {
@@ -232,6 +302,10 @@ HighlightableMap.styles = [
 				fill: var(--bwm-highlight);
 			}
 
+			.bwm-selected {
+				stroke: var(--bwm-selected);
+			}
+
 			.leaflet-attribution-flag {
 				display: none !important;
 			}
@@ -241,25 +315,63 @@ HighlightableMap.styles = [
 			}
 
 			.sr-only {
-				clip: rect(1px, 1px, 1px, 1px);
-				clip-path: inset(50%);
-				height: 1px;
+				display: block;
+				position: absolute;
 				width: 1px;
+				height: 1px;
+				padding: 0;
 				margin: -1px;
 				overflow: hidden;
-				padding: 0;
-				position: absolute;
+				clip: rect(0, 0, 0, 0);
+				white-space: nowrap;
+				border-width: 0;
 			}
 		`
 ];
 __decorate([
+    n({ type: Boolean })
+], HighlightableMap.prototype, "no-control", void 0);
+__decorate([
     n({
         type: Array,
-        converter(value, type) {
-            return value === null || value === void 0 ? void 0 : value.split(',');
+        converter: {
+            fromAttribute(value, type) {
+                return value === null || value === void 0 ? void 0 : value.split(',');
+            },
+            toAttribute(value, type) {
+                return value === null || value === void 0 ? void 0 : value.join(',');
+            }
         }
     })
 ], HighlightableMap.prototype, "highlight", void 0);
+__decorate([
+    n({
+        type: Array,
+        reflect: true,
+        converter: {
+            fromAttribute(value, type) {
+                return value === null || value === void 0 ? void 0 : value.split(',');
+            },
+            toAttribute(value, type) {
+                return value === null || value === void 0 ? void 0 : value.join(',');
+            }
+        }
+    })
+], HighlightableMap.prototype, "filter", void 0);
+__decorate([
+    n({
+        type: Array,
+        reflect: true,
+        converter: {
+            fromAttribute(value, type) {
+                return value === null || value === void 0 ? void 0 : value.split(',');
+            },
+            toAttribute(value, type) {
+                return value === null || value === void 0 ? void 0 : value.join(',');
+            }
+        }
+    })
+], HighlightableMap.prototype, "selected", void 0);
 __decorate([
     n({
         type: Boolean,
@@ -270,7 +382,18 @@ __decorate([
     n({ type: Boolean, reflect: true })
 ], HighlightableMap.prototype, "autozoom", void 0);
 __decorate([
-    n({ type: Array, reflect: true })
+    n({
+        type: Array,
+        reflect: true,
+        converter: {
+            fromAttribute(value, type) {
+                return value === null || value === void 0 ? void 0 : value.split(',');
+            },
+            toAttribute(value, type) {
+                return value === null || value === void 0 ? void 0 : value.join(',');
+            }
+        }
+    })
 ], HighlightableMap.prototype, "center", void 0);
 __decorate([
     n({ type: Number, reflect: true })

@@ -11,9 +11,7 @@ export class HighlightableMapBundled extends HighlightableMap {
 		...HighlightableMap.styles
 	];
 
-	constructor() {
-		super();
-
+	firstUpdated() {
 		this.setGeoJson(geodata);
 	}
 }

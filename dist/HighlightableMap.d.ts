@@ -1,26 +1,30 @@
-import { Map as LeafletMap, LeafletMouseEvent, Tooltip } from 'leaflet';
+import { Map as LeafletMap, LeafletMouseEvent, Tooltip, geoJSON } from 'leaflet';
 import { LitElement, PropertyValueMap } from 'lit';
 export declare class HighlightableMap extends LitElement {
+    readonly features: Set<any>;
     readonly countryFeatures: Map<string, any>;
     readonly countryEls: Map<string, SVGClipPathElement>;
     readonly leafletMap: LeafletMap;
-    private geoJson;
+    protected geoJson: ReturnType<typeof geoJSON>;
     private mapEl;
     static styles: import("lit").CSSResult[];
+    constructor();
+    'no-control': boolean;
     highlight: string[];
+    filter: string[];
+    selected: string[];
     tooltip: boolean;
     autozoom: boolean;
     center: [number, number];
     zoom: number;
     setTooltipFn(fn: (e: LeafletMouseEvent, tt: Tooltip) => void): void;
     private tooltipFn?;
-    constructor();
     setCss(sheet: CSSStyleSheet): void;
     setGeoJson(geodata?: any): void;
     get mismatched(): string[] | undefined;
-    firstUpdated(): Promise<void>;
+    private enumerateFeatures;
     protected updated(_changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void;
-    private get countries();
+    private get highlightedFeatures();
     private onResize;
     render(): import("lit-html").TemplateResult<1>;
 }
