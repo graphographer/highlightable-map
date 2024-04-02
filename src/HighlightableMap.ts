@@ -5,7 +5,8 @@ import {
 	featureGroup,
 	geoJSON,
 	map,
-	tooltip
+	tooltip,
+	DomEvent
 } from 'leaflet';
 import { LitElement, PropertyValueMap, css, html } from 'lit';
 import { property } from 'lit/decorators/property.js';
@@ -197,6 +198,8 @@ export class HighlightableMap extends LitElement {
 		})
 			.on({
 				click: e => {
+					DomEvent.stopPropagation(e);
+
 					this.dispatchEvent(
 						new CustomEvent('mouseover-country', {
 							bubbles: true,
@@ -219,6 +222,7 @@ export class HighlightableMap extends LitElement {
 					} = e.propagatedFrom;
 
 					if (
+						this.tooltip &&
 						this.highlight.find(country => {
 							return country === countryId || country === countryName;
 						})
@@ -227,6 +231,8 @@ export class HighlightableMap extends LitElement {
 							.setLatLng(e.propagatedFrom.getCenter())
 							.addTo(this.leafletMap);
 					}
+
+					DomEvent.stopPropagation(e);
 				},
 				mouseover: e => {
 					this.dispatchEvent(

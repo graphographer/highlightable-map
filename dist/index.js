@@ -1,4 +1,4 @@
-import { map, tooltip, geoJSON, featureGroup } from 'leaflet';
+import { map, tooltip, geoJSON, DomEvent, featureGroup } from 'leaflet';
 import { css, LitElement, html } from 'lit';
 
 /******************************************************************************
@@ -102,6 +102,7 @@ class HighlightableMap extends LitElement {
         })
             .on({
             click: e => {
+                DomEvent.stopPropagation(e);
                 this.dispatchEvent(new CustomEvent('mouseover-country', {
                     bubbles: true,
                     composed: true,
@@ -113,13 +114,15 @@ class HighlightableMap extends LitElement {
                     detail: e.propagatedFrom
                 }));
                 const { feature: { properties: { NAME_SORT: countryName, ADM0_A3_US: countryId } } } = e.propagatedFrom;
-                if (this.highlight.find(country => {
-                    return country === countryId || country === countryName;
-                })) {
+                if (this.tooltip &&
+                    this.highlight.find(country => {
+                        return country === countryId || country === countryName;
+                    })) {
                     tt.setContent(countryName)
                         .setLatLng(e.propagatedFrom.getCenter())
                         .addTo(this.leafletMap);
                 }
+                DomEvent.stopPropagation(e);
             },
             mouseover: e => {
                 this.dispatchEvent(new CustomEvent('mouseover-country', {
