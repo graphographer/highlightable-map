@@ -171,12 +171,7 @@ export class HighlightableMap extends LitElement {
 		}
 	}
 
-	// static geodata: object | undefined;
 	setGeoJson(geodata?: any) {
-		// if (HighlightableMap.geoJson) {
-		// 	HighlightableMap.geoJson.clearAllEventListeners().remove();
-		// }
-
 		const tt = tooltip();
 		this.geoJson = geoJSON(geodata as any, {
 			onEachFeature: (feature, layer: any) => {
@@ -329,26 +324,24 @@ export class HighlightableMap extends LitElement {
 			}
 		}
 
-		if (_changedProperties.has('filter')) {
-			if (this.countryFeatures.size && this.filter.length) {
-				this.countryFeatures.forEach(feature => {
-					const {
-						feature: {
-							properties: { NAME_SORT, ADM0_A3_US }
-						}
-					} = feature;
-					if (
-						this.filter.includes(NAME_SORT) ||
-						this.filter.includes(ADM0_A3_US)
-					) {
-						// console.log('ADDING', feature);
-						feature.addTo(this.leafletMap);
-					} else {
-						// console.log('REMOVING', feature);
-						feature.remove();
+		if (this.countryFeatures.size && this.filter.length) {
+			this.countryFeatures.forEach(feature => {
+				const {
+					feature: {
+						properties: { NAME_SORT, ADM0_A3_US }
 					}
-				});
-			}
+				} = feature;
+				if (
+					this.filter.includes(NAME_SORT) ||
+					this.filter.includes(ADM0_A3_US)
+				) {
+					// console.log('ADDING', feature);
+					feature.addTo(this.leafletMap);
+				} else {
+					// console.log('REMOVING', feature);
+					feature.remove();
+				}
+			});
 		}
 
 		// unhighlight previously highlighted
