@@ -180,7 +180,6 @@ export class HighlightableMap extends LitElement {
 	}
 
 	setGeoJson(geodata: any) {
-		console.log('SET GEOJSON', geodata);
 		const tt = tooltip();
 		this.geoJson = geoJSON(geodata as any, {
 			onEachFeature: (feature, layer: any) => {
