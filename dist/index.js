@@ -1,5 +1,5 @@
 import { map, tooltip, geoJSON, DomEvent, featureGroup } from 'leaflet';
-import { css, LitElement, html } from 'lit';
+import { css, LitElement, unsafeCSS, html } from 'lit';
 
 /******************************************************************************
 Copyright (c) Microsoft Corporation.
@@ -61,6 +61,9 @@ class HighlightableMap extends LitElement {
         this.autozoom = false;
         this.center = [0, 0];
         this.zoom = 2;
+        if (!HighlightableMap.geodata) {
+            throw new Error('Static geodata must be set first');
+        }
         this.countryFeatures = new Map();
         this.countryEls = new Map();
         this.leafletMap = map(this.mapEl, {
@@ -73,12 +76,14 @@ class HighlightableMap extends LitElement {
     setTooltipFn(fn) {
         this.tooltipFn = fn.bind(this);
     }
-    setCss(sheet) {
-        if (this.shadowRoot) {
-            this.shadowRoot.adoptedStyleSheets.unshift(sheet);
-        }
+    static setCss(styles) {
+        HighlightableMap.styles.unshift(unsafeCSS(styles));
+    }
+    static setGeoData(geodata) {
+        HighlightableMap.geodata = geodata;
     }
     setGeoJson(geodata) {
+        console.log('SET GEOJSON', geodata);
         const tt = tooltip();
         this.geoJson = geoJSON(geodata, {
             onEachFeature: (feature, layer) => {
@@ -155,7 +160,7 @@ class HighlightableMap extends LitElement {
         setTimeout(() => {
             this.dispatchEvent(new CustomEvent('hm-rendered', { bubbles: true, composed: true }));
             this.onResize();
-            this.requestUpdate('highlight');
+            this.requestUpdate();
         });
     }
     get mismatched() {
@@ -170,7 +175,10 @@ class HighlightableMap extends LitElement {
             this.countryEls.set(country, layer.getElement());
         });
     }
-    updated(_changedProperties) {
+    firstUpdated() {
+        this.setGeoJson(HighlightableMap.geodata);
+    }
+    updated(oldProps) {
         var _a, _b;
         if (this['no-control']) {
             this.leafletMap.zoomControl.remove();
@@ -196,22 +204,22 @@ class HighlightableMap extends LitElement {
                 this.leafletMap.tap.enable();
             }
         }
-        if (this.countryFeatures.size && this.filter.length) {
+        if (this.countryFeatures.size &&
+            oldProps.has('filter') &&
+            this.filter.length) {
             this.countryFeatures.forEach(feature => {
                 const { feature: { properties: { NAME_SORT, ADM0_A3_US } } } = feature;
                 if (this.filter.includes(NAME_SORT) ||
                     this.filter.includes(ADM0_A3_US)) {
-                    // console.log('ADDING', feature);
                     feature.addTo(this.leafletMap);
                 }
                 else {
-                    // console.log('REMOVING', feature);
                     feature.remove();
                 }
             });
         }
         // unhighlight previously highlighted
-        (_a = _changedProperties.get('highlight')) === null || _a === void 0 ? void 0 : _a.forEach((country) => {
+        (_a = oldProps.get('highlight')) === null || _a === void 0 ? void 0 : _a.forEach((country) => {
             var _a, _b;
             (_b = (_a = this.countryFeatures
                 .get(country)) === null || _a === void 0 ? void 0 : _a.getElement()) === null || _b === void 0 ? void 0 : _b.classList.remove('bwm-highlight');
@@ -222,7 +230,7 @@ class HighlightableMap extends LitElement {
             (_a = feature.getElement()) === null || _a === void 0 ? void 0 : _a.classList.add('bwm-highlight');
         });
         // if autozoom is set, reposition map
-        if (_changedProperties.has('highlight')) {
+        if (oldProps.has('highlight')) {
             if (this.autozoom && this.highlightedFeatures.length) {
                 const countriesFg = featureGroup(this.highlightedFeatures);
                 this.leafletMap.fitBounds(countriesFg.getBounds());
@@ -232,7 +240,7 @@ class HighlightableMap extends LitElement {
             }
         }
         // unstroke previously selected
-        (_b = _changedProperties.get('selected')) === null || _b === void 0 ? void 0 : _b.forEach((country) => {
+        (_b = oldProps.get('selected')) === null || _b === void 0 ? void 0 : _b.forEach((country) => {
             var _a;
             (_a = this.countryEls.get(country)) === null || _a === void 0 ? void 0 : _a.classList.remove('bwm-selected');
         });

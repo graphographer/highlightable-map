@@ -1,14 +1,14 @@
 import {
+	DomEvent,
 	Map as LeafletMap,
 	LeafletMouseEvent,
 	Tooltip,
 	featureGroup,
 	geoJSON,
 	map,
-	tooltip,
-	DomEvent
+	tooltip
 } from 'leaflet';
-import { LitElement, PropertyValueMap, css, html } from 'lit';
+import { LitElement, PropertyValueMap, css, html, unsafeCSS } from 'lit';
 import { property } from 'lit/decorators/property.js';
 
 export class HighlightableMap extends LitElement {
@@ -16,6 +16,8 @@ export class HighlightableMap extends LitElement {
 	readonly countryFeatures!: Map<string, any>;
 	readonly countryEls!: Map<string, SVGClipPathElement>;
 	readonly leafletMap!: LeafletMap;
+
+	static geodata: object | undefined;
 
 	protected geoJson!: ReturnType<typeof geoJSON>;
 	private mapEl = document.createElement('div');
@@ -78,6 +80,10 @@ export class HighlightableMap extends LitElement {
 
 	constructor() {
 		super();
+
+		if (!HighlightableMap.geodata) {
+			throw new Error('Static geodata must be set first');
+		}
 
 		this.countryFeatures = new Map();
 		this.countryEls = new Map();
@@ -165,13 +171,16 @@ export class HighlightableMap extends LitElement {
 	}
 	private tooltipFn?: (e: LeafletMouseEvent, tt: Tooltip) => void;
 
-	setCss(sheet: CSSStyleSheet) {
-		if (this.shadowRoot) {
-			this.shadowRoot.adoptedStyleSheets.unshift(sheet);
-		}
+	static setCss(styles: string) {
+		HighlightableMap.styles.unshift(unsafeCSS(styles));
 	}
 
-	setGeoJson(geodata?: any) {
+	static setGeoData(geodata: JSON) {
+		HighlightableMap.geodata = geodata;
+	}
+
+	setGeoJson(geodata: any) {
+		console.log('SET GEOJSON', geodata);
 		const tt = tooltip();
 		this.geoJson = geoJSON(geodata as any, {
 			onEachFeature: (feature, layer: any) => {
@@ -278,7 +287,7 @@ export class HighlightableMap extends LitElement {
 				new CustomEvent('hm-rendered', { bubbles: true, composed: true })
 			);
 			this.onResize();
-			this.requestUpdate('highlight');
+			this.requestUpdate();
 		});
 	}
 
@@ -297,8 +306,12 @@ export class HighlightableMap extends LitElement {
 		});
 	}
 
+	firstUpdated() {
+		this.setGeoJson(HighlightableMap.geodata);
+	}
+
 	protected updated(
-		_changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>
+		oldProps: PropertyValueMap<any> | Map<PropertyKey, unknown>
 	): void {
 		if (this['no-control']) {
 			this.leafletMap.zoomControl.remove();
@@ -324,7 +337,11 @@ export class HighlightableMap extends LitElement {
 			}
 		}
 
-		if (this.countryFeatures.size && this.filter.length) {
+		if (
+			this.countryFeatures.size &&
+			oldProps.has('filter') &&
+			this.filter.length
+		) {
 			this.countryFeatures.forEach(feature => {
 				const {
 					feature: {
@@ -335,17 +352,15 @@ export class HighlightableMap extends LitElement {
 					this.filter.includes(NAME_SORT) ||
 					this.filter.includes(ADM0_A3_US)
 				) {
-					// console.log('ADDING', feature);
 					feature.addTo(this.leafletMap);
 				} else {
-					// console.log('REMOVING', feature);
 					feature.remove();
 				}
 			});
 		}
 
 		// unhighlight previously highlighted
-		_changedProperties.get('highlight')?.forEach((country: string) => {
+		oldProps.get('highlight')?.forEach((country: string) => {
 			this.countryFeatures
 				.get(country)
 				?.getElement()
@@ -357,7 +372,7 @@ export class HighlightableMap extends LitElement {
 		});
 
 		// if autozoom is set, reposition map
-		if (_changedProperties.has('highlight')) {
+		if (oldProps.has('highlight')) {
 			if (this.autozoom && this.highlightedFeatures.length) {
 				const countriesFg = featureGroup(this.highlightedFeatures);
 				this.leafletMap.fitBounds(countriesFg.getBounds());
@@ -367,7 +382,7 @@ export class HighlightableMap extends LitElement {
 		}
 
 		// unstroke previously selected
-		_changedProperties.get('selected')?.forEach((country: string) => {
+		oldProps.get('selected')?.forEach((country: string) => {
 			this.countryEls.get(country)?.classList.remove('bwm-selected');
 		});
 

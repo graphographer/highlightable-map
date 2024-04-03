@@ -10,8 +10,6 @@ export class HighlightableMapBundled extends HighlightableMap {
 		unsafeCSS(leafletCss.toString()),
 		...HighlightableMap.styles
 	];
-
-	firstUpdated() {
-		this.setGeoJson(geodata);
-	}
 }
+
+HighlightableMapBundled.setGeoData(geodata as unknown as JSON);

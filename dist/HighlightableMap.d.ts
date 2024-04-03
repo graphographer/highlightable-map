@@ -5,6 +5,7 @@ export declare class HighlightableMap extends LitElement {
     readonly countryFeatures: Map<string, any>;
     readonly countryEls: Map<string, SVGClipPathElement>;
     readonly leafletMap: LeafletMap;
+    static geodata: object | undefined;
     protected geoJson: ReturnType<typeof geoJSON>;
     private mapEl;
     static styles: import("lit").CSSResult[];
@@ -19,11 +20,13 @@ export declare class HighlightableMap extends LitElement {
     zoom: number;
     setTooltipFn(fn: (e: LeafletMouseEvent, tt: Tooltip) => void): void;
     private tooltipFn?;
-    setCss(sheet: CSSStyleSheet): void;
-    setGeoJson(geodata?: any): void;
+    static setCss(styles: string): void;
+    static setGeoData(geodata: JSON): void;
+    setGeoJson(geodata: any): void;
     get mismatched(): string[] | undefined;
     private enumerateFeatures;
-    protected updated(_changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void;
+    firstUpdated(): void;
+    protected updated(oldProps: PropertyValueMap<any> | Map<PropertyKey, unknown>): void;
     private get highlightedFeatures();
     private onResize;
     render(): import("lit-html").TemplateResult<1>;
