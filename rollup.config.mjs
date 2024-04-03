@@ -4,6 +4,7 @@ import nodeResolve from '@rollup/plugin-node-resolve';
 import terser from '@rollup/plugin-terser';
 import typescript from '@rollup/plugin-typescript';
 import importCss from 'rollup-plugin-import-css';
+import { visualizer } from 'rollup-plugin-visualizer';
 
 export default [
 	{
@@ -12,8 +13,9 @@ export default [
 			dir: 'dist',
 			sourcemap: true
 		},
-		external: ['lit', 'leaflet'],
+		external: ['lit', /\@lit\/(.*)/, 'leaflet'],
 		plugins: [
+			// visualizer(),
 			nodeResolve(),
 			json(),
 			commonjs(),
