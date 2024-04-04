@@ -65,7 +65,6 @@ class HighlightableMap extends LitElement {
         HighlightableMap.geodata = geodata;
     }
     setGeoJson(geodata) {
-        console.log('SET GEOJSON', geodata);
         const tt = tooltip();
         this.geoJson = geoJSON(geodata, {
             onEachFeature: (feature, layer) => {
